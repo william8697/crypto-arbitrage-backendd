@@ -20,6 +20,18 @@ mongoose.connect(DB, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('DB connection successful!'));
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
+
+// Handle undefined routes
+app.all('*', (req, res, next) => {
+  res.status(404).json({
+    status: 'fail',
+    message: `Can't find ${req.originalUrl} on this server!`
+  });
+});
 
 // Global Middlewares
 app.use(cors({
