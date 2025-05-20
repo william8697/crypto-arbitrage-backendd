@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
-const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -19,19 +18,8 @@ const DB = 'mongodb+srv://mosesmwainaina1994:OWlondlAbn3bJuj4@cluster0.edyueep.m
 mongoose.connect(DB, {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => console.log('DB connection successful!'));
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
-});
-
-// Handle undefined routes
-app.all('*', (req, res, next) => {
-  res.status(404).json({
-    status: 'fail',
-    message: `Can't find ${req.originalUrl} on this server!`
-  });
-});
+}).then(() => console.log('DB connection successful!'))
+  .catch(err => console.error('DB connection error:', err));
 
 // Global Middlewares
 app.use(cors({
@@ -73,24 +61,38 @@ app.use('/api/v1/trades', tradeRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/support', supportRouter);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
+
+// Handle undefined routes
+app.all('*', (req, res, next) => {
+  res.status(404).json({
+    status: 'fail',
+    message: `Can't find ${req.originalUrl} on this server!`
+  });
+});
+
 // Error handling
 app.use(errorController);
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'public')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  });
-}
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
+const port = process.env.PORT || 10000;
+const server = app.listen(port, () => {
   console.log(`App running on port ${port}...`);
 });
 
 process.on('unhandledRejection', err => {
   console.log('UNHANDLED REJECTION! 💥 Shutting down...');
   console.log(err.name, err.message);
-  process.exit(1);
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
+  server.close(() => {
+    console.log('💥 Process terminated!');
+  });
 });
